@@ -11,6 +11,8 @@ from flask import Flask, request, jsonify
 import sqlite3
 import os
 import sys
+import csv
+import subprocess
 
 app = Flask(__name__)
 
@@ -99,6 +101,68 @@ def get_database_path() -> str:
     # Return the most likely path for error reporting
     return possible_paths[0]
 
+def create_database_from_csv() -> bool:
+    """
+    Create database from CSV files using the csv_to_sqlite.py script.
+    
+    Returns:
+        bool: True if successful
+    """
+    try:
+        working_dir = os.getcwd()
+        csv_script = os.path.join(working_dir, 'csv_to_sqlite.py')
+        zip_csv = os.path.join(working_dir, 'zip_county.csv')
+        health_csv = os.path.join(working_dir, 'county_health_rankings.csv')
+        db_path = os.path.join(working_dir, 'data.db')
+        
+        print(f"Creating database at: {db_path}")
+        print(f"Using script: {csv_script}")
+        print(f"ZIP CSV: {zip_csv}")
+        print(f"Health CSV: {health_csv}")
+        
+        # Check if required files exist
+        if not os.path.exists(csv_script):
+            print(f"❌ Script not found: {csv_script}")
+            return False
+        if not os.path.exists(zip_csv):
+            print(f"❌ ZIP CSV not found: {zip_csv}")
+            return False
+        if not os.path.exists(health_csv):
+            print(f"❌ Health CSV not found: {health_csv}")
+            return False
+        
+        # Run csv_to_sqlite.py for zip_county.csv
+        print("Converting zip_county.csv...")
+        result = subprocess.run([
+            sys.executable, csv_script, db_path, zip_csv
+        ], capture_output=True, text=True, cwd=working_dir)
+        
+        if result.returncode != 0:
+            print(f"❌ Failed to convert zip_county.csv: {result.stderr}")
+            return False
+        
+        # Run csv_to_sqlite.py for county_health_rankings.csv
+        print("Converting county_health_rankings.csv...")
+        result = subprocess.run([
+            sys.executable, csv_script, db_path, health_csv
+        ], capture_output=True, text=True, cwd=working_dir)
+        
+        if result.returncode != 0:
+            print(f"❌ Failed to convert county_health_rankings.csv: {result.stderr}")
+            return False
+        
+        # Verify database was created
+        if os.path.exists(db_path):
+            print(f"✅ Database created successfully at: {db_path}")
+            return True
+        else:
+            print(f"❌ Database file not found after creation")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error creating database: {e}")
+        return False
+
 def query_county_health_data(zip_code: str, measure_name: str) -> list:
     """Query county health data for given ZIP code and measure.
 
@@ -115,7 +179,11 @@ def query_county_health_data(zip_code: str, measure_name: str) -> list:
     db_path = get_database_path()
 
     if not os.path.exists(db_path):
-        raise FileNotFoundError(f"Database file not found: {db_path}")
+        print(f"Database not found at {db_path}, creating from CSV files...")
+        if create_database_from_csv():
+            print("✅ Database created successfully from CSV files")
+        else:
+            raise FileNotFoundError(f"Database file not found and could not create: {db_path}")
 
     print(f"Database path: {db_path}")
     print(f"Querying for zip: {zip_code}, measure: {measure_name}")
