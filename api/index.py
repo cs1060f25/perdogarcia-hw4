@@ -14,6 +14,17 @@ import sys
 
 app = Flask(__name__)
 
+@app.route('/')
+def root():
+    """Root endpoint to verify API is working."""
+    return jsonify({
+        "message": "County Health Data API is running",
+        "endpoints": {
+            "POST /county_data": "Get health data for ZIP code and measure"
+        },
+        "status": "ok"
+    })
+
 # Valid health measures for validation
 VALID_MEASURES = {
     "Violent crime rate", "Unemployment", "Children in poverty",
@@ -242,6 +253,9 @@ def not_found(error):
 def method_not_allowed(error):
     """Handle 405 errors for wrong HTTP methods."""
     return jsonify({"error": "Method not allowed", "status": 404}), 404
+
+# Vercel expects the WSGI application to be available as 'app'
+# This is already defined above as: app = Flask(__name__)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5005)
