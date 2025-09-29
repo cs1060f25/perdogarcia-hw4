@@ -69,6 +69,7 @@ def get_database_path() -> str:
     working_dir = os.getcwd()
     
     possible_paths = [
+        '/tmp/data.db',                        # Vercel writable temp directory (FIRST!)
         os.path.join(current_dir, 'data.db'),  # Same directory as script
         os.path.join(parent_dir, 'data.db'),   # Parent directory
         os.path.join(working_dir, 'data.db'),  # Working directory
@@ -113,7 +114,7 @@ def create_database_from_csv() -> bool:
         csv_script = os.path.join(working_dir, 'csv_to_sqlite.py')
         zip_csv = os.path.join(working_dir, 'zip_county.csv')
         health_csv = os.path.join(working_dir, 'county_health_rankings.csv')
-        db_path = os.path.join(working_dir, 'data.db')
+        db_path = '/tmp/data.db'  # Use writable temp directory
         
         print(f"Creating database at: {db_path}")
         print(f"Using script: {csv_script}")
