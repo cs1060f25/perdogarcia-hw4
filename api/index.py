@@ -2,9 +2,16 @@
 County Health Data API
 
 Author: Pedro Garcia
+Course: CS1060 Fall 2025
+Assignment: Homework 4 - API Prototyping with Generative AI
+
 Sources:
 - Database code: Claude AI (Anthropic)
-- Flask patterns: Official Flask docs
+- Flask patterns: Official Flask documentation
+- SQL injection protection: Claude AI (Anthropic)
+- Error handling: Claude AI (Anthropic)
+- Vercel deployment patterns: Claude AI (Anthropic)
+- Input validation: Claude AI (Anthropic)
 """
 
 from flask import Flask, request, jsonify

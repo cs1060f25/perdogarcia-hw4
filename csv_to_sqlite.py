@@ -3,9 +3,14 @@
 CSV to SQLite Converter
 
 Author: Pedro Garcia
+Course: CS1060 Fall 2025
+Assignment: Homework 4 - API Prototyping with Generative AI
+
 Sources:
 - Database code: Claude AI (Anthropic)
 - CSV parsing: Python standard library documentation
+- BOM handling: Claude AI (Anthropic)
+- Error handling patterns: Claude AI (Anthropic)
 """
 
 import sys

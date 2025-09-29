@@ -127,10 +127,10 @@ Ensure JSON output matches county_health_rankings schema:
 ## Part 3: Deployment and Testing - 🔲 TODO
 
 ### 3.1 Deploy API
-- [ ] Deploy to chosen platform
-- [ ] Ensure database is accessible in production
-- [ ] Test endpoint is publicly accessible
-- [ ] Verify POST requests work (browsers send GET by default)
+- [x] Deploy to chosen platform
+- [x] Ensure database is accessible in production
+- [x] Test endpoint is publicly accessible
+- [x] Verify POST requests work (browsers send GET by default)
 
 ### 3.2 Testing
 Test these scenarios:
@@ -146,35 +146,35 @@ Test these scenarios:
 ## Part 4: Repository Setup - 🔲 TODO
 
 ### 4.1 Required Files
-- [ ] `./link.txt` - Contains only the API endpoint URL
-- [ ] `./csv_to_sqlite.py` - The converter script (already done)
-- [ ] `./requirements.txt` - Python dependencies (if any)
-- [ ] `./README.md` - Project documentation
-- [ ] `./.gitignore` - Prevent caches, use Python gitignore template
-- [ ] Additional platform-specific files (vercel.json, etc.)
+- [x] `./link.txt` - Contains only the API endpoint URL
+- [x] `./csv_to_sqlite.py` - The converter script (already done)
+- [x] `./requirements.txt` - Python dependencies (if any)
+- [x] `./README.md` - Project documentation
+- [x] `./.gitignore` - Prevent caches, use Python gitignore template
+- [x] Additional platform-specific files (vercel.json, etc.)
 
 ### 4.2 Repository Management
-- [ ] Create private repo in cs1060f25 organization: `<username>-hw4`
-- [ ] Ensure repository matches deployed code exactly
-- [ ] Commit all required files
-- [ ] Test repository can be cloned fresh and scripts work
+- [x] Create private repo in cs1060f25 organization: `<username>-hw4`
+- [x] Ensure repository matches deployed code exactly
+- [x] Commit all required files
+- [x] Test repository can be cloned fresh and scripts work
 
 ## Part 5: Final Verification - 🔲 TODO
 
 ### 5.1 End-to-End Testing
-- [ ] Fresh directory test: clone repo and run csv_to_sqlite.py
-- [ ] Verify data.db is created correctly with both CSV files
-- [ ] Test API endpoint from link.txt works
-- [ ] Verify all error codes work correctly
-- [ ] Test with different CSV files to ensure script is generic
+- [x] Fresh directory test: clone repo and run csv_to_sqlite.py
+- [x] Verify data.db is created correctly with both CSV files
+- [x] Test API endpoint from link.txt works
+- [x] Verify all error codes work correctly
+- [x] Test with different CSV files to ensure script is generic
 
 ### 5.2 Submission Checklist
-- [ ] Repository is private in cs1060f25 organization
-- [ ] Repository name follows `<username>-hw4` format
-- [ ] link.txt contains working API endpoint URL (no query string)
-- [ ] All required files present and working
-- [ ] API handles all specified test cases correctly
-- [ ] SQL injection protection implemented
+- [x] Repository is private in cs1060f25 organization
+- [x] Repository name follows `<username>-hw4` format
+- [x] link.txt contains working API endpoint URL (no query string)
+- [x] All required files present and working
+- [x] API handles all specified test cases correctly
+- [x] SQL injection protection implemented
 
 ## Technical Notes
 - Use SQLite database created by csv_to_sqlite.py
