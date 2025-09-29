@@ -67,21 +67,23 @@ def create_table_from_csv(database_name: str, csv_file: str) -> None:
     table_name = get_table_name(csv_file)
 
     try:
-        # Read the entire file first to handle line endings
-        with open(csv_file, 'r', encoding='utf-8') as f:
-            content = f.read()
+        # Read CSV file properly using csv.reader to handle embedded newlines
+        with open(csv_file, 'r', encoding='utf-8-sig', newline='') as f:
+            # Use csv.reader to properly handle quoted fields with newlines
+            csv_reader = csv.reader(f)
 
-        # Normalize line endings and split into lines
-        lines = [line.strip() for line in content.replace('\r\n', '\n').replace('\r', '\n').split('\n') if line.strip()]
+            # Get headers from first row
+            try:
+                headers = next(csv_reader)
+            except StopIteration:
+                raise ValueError("CSV file is empty")
 
-        if not lines:
-            raise ValueError("CSV file is empty")
+            # Read all data rows
+            data_rows = list(csv_reader)
 
-        # Get headers from first line
-        headers = next(csv.reader([lines[0]]))
-
-        # Use DictReader to handle headers properly
-        reader = csv.DictReader(content.splitlines())
+        # Use DictReader for proper field mapping
+        with open(csv_file, 'r', encoding='utf-8-sig', newline='') as f:
+            reader = csv.DictReader(f)
 
         # Clean headers for SQL (remove quotes, spaces, and BOM)
         clean_headers = []
@@ -96,7 +98,7 @@ def create_table_from_csv(database_name: str, csv_file: str) -> None:
             clean_headers.append(clean_header)
 
         # Check if there are any data rows
-        if len(lines) <= 1:
+        if len(data_rows) == 0:
             print(f"Warning: CSV file '{csv_file}' contains only headers, creating empty table")
 
         # Connect to database
@@ -127,18 +129,15 @@ def create_table_from_csv(database_name: str, csv_file: str) -> None:
         columns = ', '.join(f'"{col}"' for col in clean_headers)
         insert_sql = f'INSERT INTO "{table_name}" ({columns}) VALUES ({placeholders})'
 
-        # Process each line after the header
+        # Process each data row
         row_count = 0
-        for line in lines[1:]:
-            # Skip empty lines
-            if not line.strip():
+        for row_data in data_rows:
+            # Skip empty rows
+            if not any(field.strip() for field in row_data):
                 continue
 
-            # Parse the CSV line
-            row = next(csv.reader([line]))
-
-            # Clean the row data
-            row = [str(cell).strip('\"\' ') for cell in row]
+            # Clean the row data (row_data is already parsed by csv.reader)
+            row = [str(cell).strip('\"\' ') for cell in row_data]
 
             # Ensure we have the right number of columns
             if len(row) < len(clean_headers):
