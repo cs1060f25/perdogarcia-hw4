@@ -1,104 +1,228 @@
-from flask import Flask, render_template, request, jsonify
-from num2words import num2words
-from text2digits import text2digits
-import base64
-import re
+"""
+County Health Data API
+
+Author: Pedro Garcia
+Sources:
+- Database code: Claude AI (Anthropic)
+- Flask patterns: Official Flask docs
+"""
+
+from flask import Flask, request, jsonify
+import sqlite3
+import os
+import sys
 
 app = Flask(__name__)
 
-def text_to_number(text):
-    """Convert English text number to integer"""
-    # Remove any non-alphanumeric characters and convert to lowercase
-    text = re.sub(r'[^a-zA-Z\s-]', '', text.lower())
-    
-    # Special case for zero
-    if text in ['zero', 'nil']:
-        return 0
-    
-    # Dictionary for special number words
-    number_words = {
-        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-        'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
-    }
-    
-    if text in number_words:
-        return number_words[text]
-    
-    raise ValueError("Unable to convert text to number")
+# Valid health measures for validation
+VALID_MEASURES = {
+    "Violent crime rate", "Unemployment", "Children in poverty",
+    "Diabetic screening", "Mammography screening", "Preventable hospital stays",
+    "Uninsured", "Sexually transmitted infections", "Physical inactivity",
+    "Adult obesity", "Premature Death", "Daily fine particulate matter"
+}
 
-def number_to_text(number):
-    """Convert integer to English text"""
+def validate_zip(zip_code: str) -> bool:
+    """Validate ZIP code format.
+
+    Args:
+        zip_code (str): ZIP code to validate
+
+    Returns:
+        bool: True if valid 5-digit ZIP code
+    """
+    return zip_code.isdigit() and len(zip_code) == 5
+
+def validate_measure(measure: str) -> bool:
+    """Validate measure name.
+
+    Args:
+        measure (str): Measure name to validate
+
+    Returns:
+        bool: True if valid measure name
+    """
+    return measure in VALID_MEASURES
+
+def get_database_path() -> str:
+    """Get the path to the database file.
+
+    Returns:
+        str: Path to data.db file
+    """
+    # Look for data.db in the parent directory (project root)
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_path = os.path.join(parent_dir, 'data.db')
+    return db_path
+
+def query_county_health_data(zip_code: str, measure_name: str) -> list:
+    """Query county health data for given ZIP code and measure.
+
+    Args:
+        zip_code (str): 5-digit ZIP code
+        measure_name (str): Health measure name
+
+    Returns:
+        list: List of matching health data records
+
+    Raises:
+        sqlite3.Error: If database query fails
+    """
+    db_path = get_database_path()
+
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Database file not found: {db_path}")
+
+    print(f"Database path: {db_path}")
+    print(f"Querying for zip: {zip_code}, measure: {measure_name}")
+
     try:
-        return num2words(number)
-    except:
-        raise ValueError("Unable to convert number to text")
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row  # Enable column access by name
+        cursor = conn.cursor()
 
-def base64_to_number(b64_str):
-    """Convert base64 to integer"""
-    try:
-        # Decode base64 to bytes, then convert bytes to integer
-        decoded_bytes = base64.b64decode(b64_str)
-        return int.from_bytes(decoded_bytes, byteorder='big')
-    except:
-        raise ValueError("Invalid base64 input")
+        # First, get the county_code for the zip code
+        # Note: The zip column is defined with quotes in the schema
+        zip_query = """
+        SELECT county_code
+        FROM zip_county
+        WHERE "zip" = ?
+        LIMIT 1
+        """
 
-def number_to_base64(number):
-    """Convert integer to base64"""
-    try:
-        # Convert integer to bytes, then encode to base64
-        byte_count = (number.bit_length() + 7) // 8
-        number_bytes = number.to_bytes(byte_count, byteorder='big')
-        return base64.b64encode(number_bytes).decode('utf-8')
-    except:
-        raise ValueError("Unable to convert to base64")
+        print(f"Executing zip query: {zip_query} with zip: {zip_code}")
+        cursor.execute(zip_query, (zip_code,))
+        zip_result = cursor.fetchone()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+        if not zip_result:
+            print(f"No county found for zip code: {zip_code}")
+            return []
 
-@app.route('/convert', methods=['POST'])
-def convert():
-    try:
-        data = request.get_json()
-        input_value = data['input']
-        input_type = data['inputType']
-        output_type = data['outputType']
-        
-        # Convert input to integer based on input type
-        if input_type == 'text':
-            number = text_to_number(input_value)
-        elif input_type == 'binary':
-            number = int(input_value, 2)
-        elif input_type == 'octal':
-            number = int(input_value, 8)
-        elif input_type == 'decimal':
-            number = int(input_value)
-        elif input_type == 'hexadecimal':
-            number = int(input_value, 16)
-        elif input_type == 'base64':
-            number = base64_to_number(input_value)
-        else:
-            raise ValueError("Invalid input type")
-            
-        # Convert integer to output type
-        if output_type == 'text':
-            result = number_to_text(number)
-        elif output_type == 'binary':
-            result = bin(number)[2:]  # Remove '0b' prefix
-        elif output_type == 'octal':
-            result = oct(number)[2:]  # Remove '0o' prefix
-        elif output_type == 'decimal':
-            result = str(number)
-        elif output_type == 'hexadecimal':
-            result = hex(number)[2:]  # Remove '0x' prefix
-        elif output_type == 'base64':
-            result = number_to_base64(number)
-        else:
-            raise ValueError("Invalid output type")
-            
-        return jsonify({'result': result, 'error': None})
+        fips_code = zip_result['county_code']
+        print(f"Found FIPS code: {fips_code} for zip: {zip_code}")
+
+        # Now query the health data using fipscode join
+        query = """
+        SELECT
+            State as state,
+            County as county,
+            State_code as state_code,
+            County_code as county_code,
+            Year_span as year_span,
+            Measure_name as measure_name,
+            Measure_id as measure_id,
+            Numerator as numerator,
+            Denominator as denominator,
+            Raw_value as raw_value,
+            Confidence_Interval_Lower_Bound as confidence_interval_lower_bound,
+            Confidence_Interval_Upper_Bound as confidence_interval_upper_bound,
+            Data_Release_Year as data_release_year,
+            fipscode as fipscode
+        FROM county_health_rankings
+        WHERE fipscode = ?
+          AND Measure_name = ?
+        """
+
+        print(f"Executing health data query with fipscode: {fips_code}, measure: {measure_name}")
+        cursor.execute(query, (fips_code, measure_name))
+        results = cursor.fetchall()
+
+        print(f"Found {len(results)} matching records")
+
+        # Convert rows to dictionaries
+        data = []
+        for row in results:
+            data.append({
+                'state': row['state'],
+                'county': row['county'],
+                'state_code': row['state_code'],
+                'county_code': row['county_code'],
+                'year_span': row['year_span'],
+                'measure_name': row['measure_name'],
+                'measure_id': row['measure_id'],
+                'numerator': row['numerator'],
+                'denominator': row['denominator'],
+                'raw_value': row['raw_value'],
+                'confidence_interval_lower_bound': row['confidence_interval_lower_bound'],
+                'confidence_interval_upper_bound': row['confidence_interval_upper_bound'],
+                'data_release_year': row['data_release_year'],
+                'fipscode': row['fipscode']
+            })
+
+        return data
+
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+        raise
     except Exception as e:
-        return jsonify({'result': None, 'error': str(e)})
+        print(f"Unexpected error: {e}")
+        raise
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/county_data', methods=['POST'])
+def county_data():
+    """Handle county health data requests.
+
+    Returns:
+        JSON response with health data or error message
+    """
+    try:
+        # Check for coffee=teapot parameter (HTTP 418)
+        if request.json and 'coffee' in request.json and request.json['coffee'] == 'teapot':
+            return jsonify({"error": "I'm a teapot", "status": 418}), 418
+
+        # Validate request has JSON content
+        if not request.json:
+            return jsonify({"error": "Request must contain JSON data", "status": 400}), 400
+
+        # Extract and validate required parameters
+        zip_code = request.json.get('zip')
+        measure_name = request.json.get('measure_name')
+
+        # Check for missing parameters
+        if not zip_code:
+            return jsonify({"error": "Missing required parameter: zip", "status": 400}), 400
+
+        if not measure_name:
+            return jsonify({"error": "Missing required parameter: measure_name", "status": 400}), 400
+
+        # Validate ZIP code format
+        if not validate_zip(zip_code):
+            return jsonify({"error": "Invalid zip code format. Must be 5 digits.", "status": 404}), 404
+
+        # Validate measure name
+        if not validate_measure(measure_name):
+            return jsonify({"error": "Invalid measure_name", "status": 404}), 404
+
+        # Query database
+        try:
+            results = query_county_health_data(zip_code, measure_name)
+        except FileNotFoundError as e:
+            return jsonify({"error": "Database not found", "status": 500}), 500
+        except sqlite3.Error as e:
+            return jsonify({"error": "Database error", "status": 500}), 500
+
+        # Check if any results found
+        if not results:
+            return jsonify({"error": "No data found for the given zip code and measure", "status": 404}), 404
+
+        # Return successful results
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({"error": "Internal server error", "status": 500}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors for wrong endpoints or methods."""
+    return jsonify({"error": "Endpoint not found", "status": 404}), 404
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Handle 405 errors for wrong HTTP methods."""
+    return jsonify({"error": "Method not allowed", "status": 404}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5005)

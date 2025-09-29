@@ -1,0 +1,109 @@
+# Windsurf Rules for CS1060 HW4
+
+## Critical Requirements (Automated Grading)
+
+### HTTP Status Codes (EXACT)
+- 200: Successful query with results
+- 400: Missing zip or measure_name
+- 404: Invalid zip/measure_name or wrong endpoint
+- 418: coffee=teapot parameter present
+
+### JSON Response Format (MUST MATCH)
+```python
+# Success: Return country_health_rankings schema exactly
+[{
+    "confidence_interval_lower_bound": "0.22",
+    "county": "Middlesex County",
+    "county_code": "17",
+    "measure_name": "Adult obesity",
+    # ... all 14 fields from country_health_rankings
+}]
+
+# Error:
+{"error": "Error message", "status": 400}
+```
+
+### SQL Security (WILL BE TESTED)
+```python
+# ALWAYS use parameterized queries
+sql = "SELECT * FROM table WHERE column = ?"
+cursor.execute(sql, (user_input,))
+
+# NEVER string concatenation
+sql = f"SELECT * FROM table WHERE column = '{user_input}'"  # WRONG
+```
+
+### Input Validation
+```python
+VALID_MEASURES = {
+    "Violent crime rate", "Unemployment", "Children in poverty",
+    "Diabetic screening", "Mammography screening", "Preventable hospital stays",
+    "Uninsured", "Sexually transmitted infections", "Physical inactivity",
+    "Adult obesity", "Premature Death", "Daily fine particulate matter"
+}
+
+def validate_zip(zip_code): return zip_code.isdigit() and len(zip_code) == 5
+def validate_measure(measure): return measure in VALID_MEASURES
+```
+
+## Code Standards
+
+### Documentation
+```python
+def function_name(param1: type) -> type:
+    """Brief description.
+
+    Args: param1 (type): Description
+    Returns: type: Description
+    Raises: Exception: When raised
+    """
+```
+
+### csv_to_sqlite.py Requirements
+- Accept ANY CSV (not just provided files)
+- Args: database_name csv_file
+- Table name from CSV filename
+- All columns as TEXT
+- Generic implementation
+
+### Error Handling
+- Use try/except for all file/DB operations
+- sys.exit(1) for errors, 0 for success
+- Meaningful error messages
+
+## Required Files
+- `./csv_to_sqlite.py` - CSV converter
+- `./link.txt` - API URL only (no query params)
+- `./requirements.txt` - Dependencies
+- `./README.md` - Documentation
+- `./.gitignore` - Standard Python gitignore
+
+## Testing Checklist
+```python
+# These WILL be tested:
+POST /country_data {"zip":"02138","measure_name":"Adult obesity"} → 200
+POST /country_data {"zip":"02138"} → 400  # Missing measure_name
+POST /country_data {"zip":"00000","measure_name":"Adult obesity"} → 404
+POST /country_data {"zip":"02138","measure_name":"Adult obesity","coffee":"teapot"} → 418
+GET /country_data → 404  # Wrong method
+POST /other → 404  # Wrong endpoint
+# SQL injection attempts (various malicious inputs)
+```
+
+## Pre-Submission
+1. Clone repo to fresh directory
+2. Run `python3 csv_to_sqlite.py data.db zip_county.csv`
+3. Run `python3 csv_to_sqlite.py data.db country_health_rankings.csv`
+4. Test API endpoint from link.txt
+5. Verify all status codes work
+6. Repository: private, cs1060f25 org, `<username>-hw4` name
+
+## Attribution Format
+```python
+"""
+Author: [Your Name]
+Sources:
+- Database code: Claude AI (Anthropic)
+- Flask patterns: Official Flask docs
+"""
+```
