@@ -61,29 +61,43 @@ def get_database_path() -> str:
     Returns:
         str: Path to data.db file
     """
-    # Get the directory where this script is located
+    # Try multiple locations for the database
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(current_dir, 'data.db')
+    parent_dir = os.path.dirname(current_dir)
+    working_dir = os.getcwd()
     
-    print(f"Looking for database at: {db_path}")
+    possible_paths = [
+        os.path.join(current_dir, 'data.db'),  # Same directory as script
+        os.path.join(parent_dir, 'data.db'),   # Parent directory
+        os.path.join(working_dir, 'data.db'),  # Working directory
+        '/var/task/data.db',                   # Vercel root
+        './data.db'                            # Relative to working dir
+    ]
+    
     print(f"Current directory: {current_dir}")
-    print(f"Working directory: {os.getcwd()}")
+    print(f"Parent directory: {parent_dir}")
+    print(f"Working directory: {working_dir}")
     
-    # List contents of current directory for debugging
-    try:
-        contents = os.listdir(current_dir)
-        print(f"Directory contents: {contents}")
-        
-        # Check if data.db exists
-        if 'data.db' in contents:
-            print(f"✅ Found data.db in directory")
+    # List contents for debugging
+    for directory in [current_dir, parent_dir, working_dir]:
+        try:
+            if os.path.exists(directory):
+                contents = os.listdir(directory)
+                print(f"Contents of {directory}: {contents}")
+        except Exception as e:
+            print(f"Error listing {directory}: {e}")
+    
+    # Try each path
+    for db_path in possible_paths:
+        print(f"Checking: {db_path}")
+        if os.path.exists(db_path):
+            print(f"✅ Found database at: {db_path}")
+            return db_path
         else:
-            print(f"❌ data.db NOT found in directory")
-            
-    except Exception as e:
-        print(f"Error listing directory: {e}")
+            print(f"❌ Not found: {db_path}")
     
-    return db_path
+    # Return the most likely path for error reporting
+    return possible_paths[0]
 
 def query_county_health_data(zip_code: str, measure_name: str) -> list:
     """Query county health data for given ZIP code and measure.
