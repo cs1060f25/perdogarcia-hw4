@@ -1,26 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python",
-      "config": {
-        "includeFiles": "api/data.db"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
-    }
-  ],
-  "env": {
-    "PYTHONPATH": "."
-  },
   "functions": {
     "api/index.py": {
-      "includeFiles": "api/data.db"
+      "includeFiles": "api/**"
     }
   }
 }

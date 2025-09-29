@@ -50,47 +50,29 @@ def get_database_path() -> str:
     Returns:
         str: Path to data.db file
     """
-    # DEPLOYMENT_MODE: Multiple path strategies for different environments
-    
-    # Strategy 1: Same directory as this file (Vercel serverless)
+    # Get the directory where this script is located
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    local_db = os.path.join(current_dir, 'data.db')
+    db_path = os.path.join(current_dir, 'data.db')
     
-    # Strategy 2: Relative to current working directory
-    cwd_db = os.path.join(os.getcwd(), 'data.db')
+    print(f"Looking for database at: {db_path}")
+    print(f"Current directory: {current_dir}")
+    print(f"Working directory: {os.getcwd()}")
     
-    # Strategy 3: Parent directory (local development)
-    parent_dir = os.path.dirname(current_dir)
-    parent_db = os.path.join(parent_dir, 'data.db')
+    # List contents of current directory for debugging
+    try:
+        contents = os.listdir(current_dir)
+        print(f"Directory contents: {contents}")
+        
+        # Check if data.db exists
+        if 'data.db' in contents:
+            print(f"✅ Found data.db in directory")
+        else:
+            print(f"❌ data.db NOT found in directory")
+            
+    except Exception as e:
+        print(f"Error listing directory: {e}")
     
-    # Strategy 4: Check common Vercel paths
-    vercel_paths = [
-        '/var/task/api/data.db',
-        '/tmp/data.db',
-        './api/data.db',
-        './data.db'
-    ]
-    
-    # Try each path in order
-    all_paths = [local_db, cwd_db, parent_db] + vercel_paths
-    
-    for db_path in all_paths:
-        if os.path.exists(db_path):
-            print(f"Found database at: {db_path}")
-            return db_path
-    
-    # If no database found, log all attempted paths
-    print("Database not found. Attempted paths:")
-    for i, path in enumerate(all_paths, 1):
-        exists = "EXISTS" if os.path.exists(path) else "NOT FOUND"
-        print(f"  {i}. {path} - {exists}")
-    
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Script directory: {current_dir}")
-    print(f"Directory contents: {os.listdir(current_dir) if os.path.exists(current_dir) else 'N/A'}")
-    
-    # Return the most likely path even if it doesn't exist (for better error messages)
-    return local_db
+    return db_path
 
 def query_county_health_data(zip_code: str, measure_name: str) -> list:
     """Query county health data for given ZIP code and measure.
